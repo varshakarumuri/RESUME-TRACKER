@@ -1,0 +1,9 @@
+creating a virtual environment --- conda create -p venv python==3.10
+activate virtual environment   --- conda activate venv/
+installation of the requirememts - pip install -r requirements.txt
+
+------work flow-------
+1.field to put job description
+2.upload PDF
+3.PDF ti image ---->processing-->google gemini pro
+4.prompts template[multiple prompts]
