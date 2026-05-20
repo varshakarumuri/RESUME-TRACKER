@@ -14,7 +14,8 @@ genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 def get_gemini_response(user_input,pdf_content,prompt):
     model = genai.GenerativeModel("gemini-2.5-flash")
-    response=model.generate_content([prompt,pdf_content[0],user_input])
+    enhanced_prompt = f"{prompt}\n\nIMPORTANT: Provide a brief, accurate, and concise response. Avoid lengthy explanations. Be direct and to the point."
+    response=model.generate_content([enhanced_prompt,pdf_content[0],user_input])
     return response.text
 
 
@@ -44,47 +45,50 @@ def input_pdf_setup(uploaded_file):
 ## Streamlit App
 
 st.set_page_config(page_title="ATS Resume Expert")
-st.header("ATS Tracking System")
+st.markdown("<h1 style='text-align: center;'>ATS Tracking System</h1>", unsafe_allow_html=True)
+
+# Initialize session state for conversation history
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
 input_text=st.text_area("Job Description: ",key="input")
-uploaded_file=st.file_uploader("Upload your resume(PDF)...",type=["pdf"])
+uploaded_file=st.file_uploader("Upload your resume(PDF)",type=["pdf"])
 
 
 if uploaded_file is not None:
     st.write("PDF Uploaded Successfully")
 
+st.divider()
 
-submit1 = st.button("Tell Me About the Resume")
+# Display conversation history
+st.subheader("Conversation")
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.write(message["content"])
 
-#submit2 = st.button("How Can I Improvise my Skills")
-
-submit3 = st.button("Percentage match")
-
-input_prompt1 = """
- You are an experienced Technical Human Resource Manager,your task is to review the provided resume against the job description. 
-  Please share your professional evaluation on whether the candidate's profile aligns with the role. 
- Highlight the strengths and weaknesses of the applicant in relation to the specified job requirements.
-"""
-
-input_prompt3 = """
-You are an skilled ATS (Applicant Tracking System) scanner with a deep understanding of data science and ATS functionality, 
-your task is to evaluate the resume against the provided job description. give me the percentage of match if the resume matches
-the job description. First the output should come as percentage and then keywords missing and last final thoughts.
-"""
-
-if submit1:
-    if uploaded_file is not None:
-        pdf_content=input_pdf_setup(uploaded_file)
-        response=get_gemini_response(input_text,pdf_content,input_prompt1)
-        st.subheader("The Response is")
-        st.write(response)
-    else:
-        st.write("Please upload the resume")
-
-elif submit3:
-    if uploaded_file is not None:
-        pdf_content=input_pdf_setup(uploaded_file)
-        response=get_gemini_response(input_text,pdf_content,input_prompt3)
-        st.subheader("The Response is")
-        st.write(response)
-    else:
-        st.write("Please upload the resume")
+# Custom prompt input
+if uploaded_file  and input_text is not None:
+    user_prompt = st.chat_input("Ask anything about your resume...")
+    
+    if user_prompt:
+        # Add user message to history
+        st.session_state.messages.append({"role": "user", "content": user_prompt})
+        
+        # Display user message
+        with st.chat_message("user"):
+            st.write(user_prompt)
+        
+        # Get AI response
+        with st.spinner("Analyzing..."):
+            pdf_content=input_pdf_setup(uploaded_file)
+            response=get_gemini_response(user_prompt, pdf_content, input_text)
+            
+            # Add assistant message to history
+            st.session_state.messages.append({"role": "assistant", "content": response})
+            
+            # Display assistant message
+            with st.chat_message("assistant"):
+                st.write(response)
+else:
+    st.info("Please upload resume and enter job description to start the conversation")
+    
